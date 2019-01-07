@@ -19,7 +19,6 @@ void draw() {
   fade.set("ftime",(float)frameCount);
   spherePos.x = mouseX - width/2;
   spherePos.y = mouseY - height/2;
-  spherePos.z = 100;
   fade.set("fadePos",spherePos.x,spherePos.y,spherePos.z-555);
   shader(fade);
   translate(width/2,height/2);
@@ -55,4 +54,9 @@ void translate(PVector v) {
 
 void pointLight(float r, float g, float b, PVector p) {
   pointLight(r,g,b,p.x,p.y,p.z);
+}
+
+void mouseWheel(MouseEvent event) {
+  float e = event.getCount();
+  spherePos.z += e*10f;
 }
