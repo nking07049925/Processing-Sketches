@@ -11,10 +11,6 @@ PGraphics renderSSAA;
 PShader downScale;
 float upscale = 2;
 
-int rotationFrames = 800;
-boolean saveFrames = false;
-int startFrame = 0;
-
 void setup() {
   //fullScreen(P3D);
   size(640, 640, P3D);
@@ -24,17 +20,7 @@ void setup() {
   size = min(render.width, render.height)/2;
   voxel = size/256f;
   renderSSAA = createGraphics(width, height, P3D);
-  img = loadImage("img.png");
-  img.loadPixels();
-  for (int i = 0; i < img.width; i++) {
-    for (int j = 0; j < img.height; j++) {
-      int c = img.pixels[i+j*img.width];
-      int r = c >> 16 & 0xFF;
-      int g = c >> 8 & 0xFF;
-      int b = c & 0xFF;
-      colors[r][g][b] = true;
-    }
-  }
+  loadImg();
   box = createShape();
   box.beginShape(LINES);
   box.strokeWeight(5);
@@ -59,21 +45,20 @@ void setup() {
 }
 
 void draw() {
-  int frameDelta = frameCount - startFrame;
   background(128);
   render.beginDraw();
   render.noFill();
   render.shader(pointShader, POINTS);
   render.strokeWeight(voxel*1.2);
-  render.strokeCap(SQUARE);
   render.clear();
   render.translate(render.width/2, render.height/2);
-  float deg = frameCount*TWO_PI/rotationFrames;
+  float deg = frameCount*0.03;
   render.rotateY(deg);
   render.translate(-size/2, -size/2, -size/2);
+  render.shape(box);
   for (int i = 0; i < 255; i++) {
     for (int j = 0; j < 255; j++) {
-      for (int k = 0; k < 255; k++) {
+      for (int k = 0; k < 256; k++) {
         if (colors[i][j][k]) {
           render.stroke(i, j, k);
           render.point(i * voxel, j * voxel, k * voxel);
@@ -81,35 +66,30 @@ void draw() {
       }
     }
   }
-  render.shape(box);
   render.endDraw();
   downScale.set("image", render);
   renderSSAA.filter(downScale);
   image(img, 0, 0);
   image(renderSSAA, 0, 0);
-  if (saveFrames && frameDelta <= rotationFrames)
-    saveFrame("/frames/frame"+nf(frameDelta,3)+".png");
+}
+
+void loadImg() {
+  img = loadImage("https://picsum.photos/640/640/?random", "png");
+  img.loadPixels();
+  colors = new boolean[256][256][256];
+  for (int i = 0; i < img.width; i++) {
+    for (int j = 0; j < img.height; j++) {
+      int c = img.pixels[i+j*img.width];
+      int r = c >> 16 & 0xFF;
+      int g = c >> 8 & 0xFF;
+      int b = c & 0xFF;
+      colors[r][g][b] = true;
+    }
+  }
 }
 
 void mousePressed() {
-  if (mouseButton == LEFT) {
-    img = loadImage("https://picsum.photos/640/640/?random", "png");
-    img.loadPixels();
-    colors = new boolean[256][256][256];
-    for (int i = 0; i < img.width; i++) {
-      for (int j = 0; j < img.height; j++) {
-        int c = img.pixels[i+j*img.width];
-        int r = c >> 16 & 0xFF;
-        int g = c >> 8 & 0xFF;
-        int b = c & 0xFF;
-        colors[r][g][b] = true;
-      }
-    }
-  }
-  if (mouseButton == RIGHT) {
-    startFrame = frameCount;
-    saveFrames = true;
-  }
+  loadImg();
 }
 
 void setBox() {
