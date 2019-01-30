@@ -6,47 +6,64 @@ import java.awt.Robot;
 int snakeQuality = 20;
 PVector[] baseShape = new PVector[snakeQuality];
 PVector[] baseNorm = new PVector[snakeQuality];
-ArrayList<PosAngle> curve = new ArrayList<PosAngle>();
-PosAngle camera;
+ArrayList<Segment> curve = new ArrayList<Segment>();
+int headSize = 7;
+Segment[] head = new Segment[headSize];
+float[][] headNormals = new float[headSize][2];
+float headLength;
+Segment camera;
 PVector startCamDir = new PVector(0, 0, 1);
 PVector upCamDir = new PVector(0, 1, 0);
 float camDist;
 
-float r;
+float maxR;
 int dist = 3;
 int startLength = 200;
 float moveSpeed;
 
+boolean mouseMove = true;
 boolean frontView = true;
 
 PShader phong;
+PShader phongTex;
 PShader skySphere;
 
 PImage sky;
+PImage skin;
 
 PostFX fx;
 Robot robot;
 
+float offs = 0.3;
+float headFunc(float x) {
+  return x < 0.5 ? 1+(1-cos(x*TWO_PI))/2*offs : sqrt(1-sq(2*x-1))*(1+offs);
+}
+float headAngleFunc(float x) {
+  return x < 0.5 ? atan(sin(x*TWO_PI)*PI*offs)+HALF_PI : atan(-2*(1+offs)*(2*x-1)/sqrt(1-sq(2*x-1)))+HALF_PI;
+}
+
 void setup() {
   fullScreen(P3D);
-  //size(720, 480, P3D);
+  //size(1080, 720, P3D);
   fx = new PostFX(this);
   noCursor();
   //noSmooth();
   textureMode(NORMAL);
   phong = loadShader("PhongFrag.glsl", "PhongVert.glsl");
+  phongTex = loadShader("PhongTexFrag.glsl", "PhongTexVert.glsl");
   camDist = (height/2.0) / tan(PI*30.0 / 180.0);
   skySphere = loadShader("skyFrag.glsl");
   skySphere.set("camDist", camDist*0.7);
   sky = loadImage("sky.jpg");
-  r = width/60f;
-  moveSpeed = r/5;
+  skin = loadImage("skin.jpg");
+  maxR = width/60f;
+  moveSpeed = maxR/5;
   //stroke(255);
   //noFill();
   noStroke();
   fill(255);
   for (int i = 0; i < snakeQuality; i++) {
-    float deg = -i*TWO_PI/snakeQuality;
+    float deg = -(i-0.5)*TWO_PI/snakeQuality - HALF_PI;
     baseShape[i] = new PVector(cos(deg), sin(deg));
   }
   baseNorm = baseShape.clone();/*
@@ -58,9 +75,18 @@ void setup() {
    temp
    ));
    }*/
-  for (int i = 0; i < startLength*dist; i++)
-    curve.add(new PosAngle());
-  camera = new PosAngle();
+  int max = startLength*dist;
+  headLength = maxR*4.0;
+  for (int i = 0; i < max; i++)
+    curve.add(new Segment());
+    
+  for (int i = 0; i < headSize; i++) {
+    float x = i/(headSize-1f);
+    head[i] = new Segment(new PVector(0, 0, x*headLength), new PMatrix3D(), maxR*headFunc(x));
+    float deg = headAngleFunc(x);
+    headNormals[i] = new float[] { cos(deg)*maxR/headLength, sin(deg) };
+  }
+  camera = new Segment();
   try {
     robot = new Robot();
   } 
@@ -71,35 +97,37 @@ void setup() {
 
 float rotSpeed = 0.05;
 
-boolean paused;
+boolean paused = true;
 
 void draw() {
   drawBackground();
-  shader(phong);
+  shader(phongTex);
   perspective(PI/2.0, (float)width/height, 1.0, camDist * 10.0);
   if (frontView)
     setCamera();
   else
     translate(width/2, height/2);
-  fill(#7EC67F);
   ambientLight(28, 28, 28);
   directionalLight(68, 68, 48, -1, 1, -1);
   directionalLight(20, 20, 30, 1, 0, 1);
   //PosAngle pa = curve.get(curve.size()-1);
   lightFalloff(1.0, 0.02, 0.0);
   lightSpecular(255, 255, 255);
-  specular(128);
-  shininess(30);
-  pointLight(120, 120, 120, 0, 0, 0);
+  specular(188);
+  shininess(50);
+  emissive(255);
+  pointLight(255, 255, 255, 0, 0, 0);
   if (!paused) {
     curve.add(camera.copy());
     curve.remove(0);
+    for (int i = 0; i < curve.size(); i++)
+      curve.get(i).updateRad(i, curve.size());
   }
   drawSnake();
   resetShader();
   noLights();
   fill(255, 255, 255);
-  sphere(r);
+  sphere(maxR);
   updateScene();
   perspective();
   fx.render().bloom(0.9, 30, 10).compose();
@@ -148,49 +176,49 @@ void keyReleased() {
 
 void updateScene() {
   PVector moveDir = new PVector();
-  camera.angle.mult(startCamDir, moveDir);
+  camera.mat.mult(startCamDir, moveDir);
   moveDir.setMag(moveSpeed);
   if (!paused)
     camera.pos.add(moveDir);
 }
 
 void mouseMoved() {
-  if (dist(mouseX, mouseY, width/2, height/2) > 1) {
+  if (dist(mouseX, mouseY, width/2, height/2) > 1 && mouseMove) {
     robot.mouseMove(width/2, height/2);
     float dy = (pmouseY - mouseY)/500f;
     dy = constrain(dy, -rotSpeed, rotSpeed);
-    camera.angle.rotateX(dy);
+    camera.mat.rotateX(dy);
     float dx = (mouseX - pmouseX)/500f;
     dx = constrain(dx, -rotSpeed, rotSpeed);
-    camera.angle.rotateY(-dx);
+    camera.mat.rotateY(-dx);
   }
 }
 
 void setCamera() {
-  PosAngle temp = camera.copy();
+  Segment temp = camera.copy();
   PVector ndir = new PVector();
   PVector nup = new PVector();
-  temp.angle.mult(startCamDir, ndir);
-  temp.angle.mult(upCamDir, nup);
-  temp.pos.sub(PVector.mult(nup, r*4));
-  temp.pos.sub(PVector.mult(ndir, r*moveSpeed));
+  temp.mat.mult(startCamDir, ndir);
+  temp.mat.mult(upCamDir, nup);
+  temp.pos.sub(PVector.mult(nup, maxR*4));
+  temp.pos.sub(PVector.mult(ndir, maxR*moveSpeed));
   camera(temp.pos, ndir, nup);
   if (leftPressed) {
-    camera.angle.rotateY(rotSpeed);
+    camera.mat.rotateY(rotSpeed);
   }
   if (rightPressed) {
-    camera.angle.rotateY(-rotSpeed);
+    camera.mat.rotateY(-rotSpeed);
   }
   if (upPressed) {
-    camera.angle.rotateX(-rotSpeed);
+    camera.mat.rotateX(-rotSpeed);
   }
   if (downPressed) {
-    camera.angle.rotateX(rotSpeed);
+    camera.mat.rotateX(rotSpeed);
   }
 }
 
 void drawBackground() {
-  PMatrix3D rot = camera.angle.get();
+  PMatrix3D rot = camera.mat.get();
   rot.invert();
   skySphere.set("rot", rot, true);
   shader(skySphere);
@@ -207,67 +235,125 @@ void drawBackground() {
 }
 
 void drawSnake() {
+  //fill(#7EC67F);
+  //fill(0);
   int s = curve.size();
+  Segment last = curve.get(s - 1);
   if (s > dist) {
-    PVector[] prev = getBase(curve.get(0), 0, s);
-    for (int i = dist; i < s-dist; i+=dist) {
-      PosAngle pa = curve.get(i);
-      PVector[] cur = getBase(pa, i, s);
+    PVector[] prev = getBase(curve.get(0));
+    for (int i = dist; i < s; i+=dist) {
+      Segment pa = curve.get(i);
+      PVector[] cur = getBase(pa);
       drawBase(prev, cur);
       prev = cur;
     }
-    if (s%dist>0) {
-      PosAngle pa = curve.get(s-1);
-      PVector[] cur = getBase(pa, s-1, s);
-      drawBase(prev, cur);
-    }
+    PVector[] cur = getBase(last);
+    drawBase(prev, cur);
+    pushMatrix();
+    translate(last.pos);
+    applyMatrix(last.mat);
+    drawHead();
+    shader(phong);
+    fill(0);
+    tint(255);
+    specular(190);
+    shininess(50);
+    float eyeDist = maxR*1.0;
+    float eyeR = maxR*0.2;
+    translate(0,-maxR,headLength*0.8);
+    fill(0);
+    translate(eyeDist/2,0,0);
+    sphere(eyeR);
+    translate(-eyeDist,0,0);
+    sphere(eyeR);
+    popMatrix();
+  }
+}
+
+void drawHead() {
+  for (int i = 0; i < headSize-1; i++) {
+    drawBase(getHeadBase(head[i], i), getHeadBase(head[i+1], i+1));
   }
 }
 
 void drawBase(PVector[] base1, PVector[] base2) {
   pushMatrix();
   beginShape(TRIANGLE_STRIP);
+  texture(skin);
   for (int i = 0; i < snakeQuality+1; i++) {
     int j = i%snakeQuality;
+    float pos = (float)i/snakeQuality;
+    float k = 0.3;
+    if (pos > k && pos < 1-k)
+      tint(#F8FFE5);
+    else
+      tint(#4D984D);
     normal(base1[j*2]);
-    vertex(base1[j*2+1]);
+    vertex(base1[j*2+1], pos, 0);
     normal(base2[j*2]);
-    vertex(base2[j*2+1]);
+    vertex(base2[j*2+1], pos, 1);
   }
   endShape();
   popMatrix();
 }
 
-PVector[] getBase(PosAngle pa, int ind, int max) {
+PVector[] getBase(Segment seg) {
   PVector[] temp = new PVector[snakeQuality*2];
   for (int i = 0; i < snakeQuality; i++) {
     PVector curP = baseShape[i];
     PVector curN = baseNorm[i];
     temp[i*2] = new PVector();
     temp[i*2+1] = new PVector();
-    pa.angle.mult(curN, temp[i*2]);
-    pa.angle.mult(curP, temp[i*2+1]);
-    temp[i*2+1].mult(r*sqrt((float)ind/max));
-    temp[i*2+1].add(pa.pos);
+    seg.mat.mult(curN, temp[i*2]);
+    seg.mat.mult(curP, temp[i*2+1]);
+    temp[i*2+1].mult(seg.r);
+    temp[i*2+1].add(seg.pos);
   }
   return temp;
 }
 
-class PosAngle {
+PVector[] getHeadBase(Segment seg, int ind) {
+  PVector[] temp = new PVector[snakeQuality*2];
+  for (int i = 0; i < snakeQuality; i++) {
+    PVector curP = baseShape[i];
+    PVector curN = baseNorm[i].copy();
+    curN.setMag(headNormals[ind][1]);
+    curN.z = headNormals[ind][0];
+    temp[i*2] = new PVector();
+    temp[i*2+1] = new PVector();
+    seg.mat.mult(curN, temp[i*2]);
+    seg.mat.mult(curP, temp[i*2+1]);
+    temp[i*2+1].mult(seg.r);
+    temp[i*2+1].add(seg.pos);
+  }
+  return temp;
+}
+
+class Segment {
   PVector pos;
-  PMatrix3D angle;
+  PMatrix3D mat;
+  float r;
 
-  PosAngle() {
-    this(new PVector(), new PMatrix3D());
+  Segment() {
+    this(new PVector(), new PMatrix3D(), 1);
   }
 
-  PosAngle(PVector p, PMatrix3D a) {
+  Segment(float rad) {
+    this(new PVector(), new PMatrix3D(), rad);
+  }
+
+  Segment(PVector p, PMatrix3D a, float rad) {
     pos = p;
-    angle = a;
+    mat = a;
+    r = rad;
   }
 
-  PosAngle copy() {
-    return new PosAngle(pos.copy(), new PMatrix3D(angle));
+  Segment copy() {
+    return new Segment(pos.copy(), new PMatrix3D(mat), r);
+  }
+
+  void updateRad(int ind, int max) {
+    r = maxR*sqrt((float)ind/max);
   }
 }
 
@@ -277,6 +363,10 @@ void translate(PVector v) {
 
 void vertex(PVector v) {
   vertex(v.x, v.y, v.z);
+}
+
+void vertex(PVector vec, float u, float v) {
+  vertex(vec.x, vec.y, vec.z, u, v);
 }
 
 void normal(PVector v) {

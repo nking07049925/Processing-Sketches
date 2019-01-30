@@ -19,12 +19,16 @@
 uniform mat4 modelviewMatrix;
 uniform mat4 transformMatrix;
 uniform mat3 normalMatrix;
+uniform vec2 texOffset;
+uniform mat4 texMatrix;
 
 attribute vec4 position;
 attribute vec4 color;
 attribute vec3 normal;
+attribute vec2 texCoord;
 
 out vec4 vColor;
+out vec4 vertTexCoord;
 
 attribute vec4 ambient;
 attribute vec4 specular;
@@ -47,7 +51,9 @@ void main() {
   ecVertex = vec3(modelviewMatrix * position);
   
   // Normal vector in eye coordinates
-  vEcNormal = normalize(normalMatrix * normal);     
+  vEcNormal = normalize(normalMatrix * normal);
+
+  vertTexCoord = texMatrix * vec4(texCoord, 1.0, 1.0);        
 	
 	vColor = color;
 	vAmbient = ambient;
