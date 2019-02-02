@@ -78,6 +78,6 @@ void draw() {
   fx.render().bloom(0.95, 30, 10).compose();
   fill(255,0,0);
   camera();
-  text(gameOver?"dead":"alive", 0, 50);
+  //text(gameOver?"dead":"alive", 0, 50);
   fill(255);
 }

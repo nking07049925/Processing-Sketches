@@ -25,7 +25,7 @@ float moveSpeed;
 void snakeSetup() {
   maxR = width/60f;
   moveSpeed = maxR/5;
-  
+
   for (int i = 0; i < snakeQuality; i++) {
     float deg = -(i-0.5)*TWO_PI/snakeQuality - HALF_PI;
     baseShape[i] = new PVector(cos(deg), sin(deg));
@@ -46,22 +46,23 @@ void snakeSetup() {
 }
 
 void drawSnake() {
-  lightSpecular(255, 255, 255);
   specular(188);
-  shininess(50);
-  emissive(255);
   int s = curve.size();
   Segment last = curve.get(s - 1);
   if (s > dist) {
     PVector[] prev = getBase(curve.get(0));
     for (int i = dist; i < s; i+=dist) {
+      boolean petr1 = gameOver && abs(i-dist-collisionInd) < petrifyInd;
+      boolean petr2 = gameOver && abs(i-collisionInd) < petrifyInd;
       Segment pa = curve.get(i);
       PVector[] cur = getBase(pa);
-      drawBase(prev, cur);
+      drawBase(prev, cur, petr1, petr2);
       prev = cur;
     }
     PVector[] cur = getBase(last);
-    drawBase(prev, cur);
+    boolean petr1 = gameOver && abs(s-dist-1-collisionInd) < petrifyInd;
+    boolean petr2 = gameOver && abs(s-1-collisionInd) < petrifyInd;
+    drawBase(prev, cur, petr1, petr2);
     pushMatrix();
     translate(last.pos);
     applyMatrix(last.mat);
@@ -84,12 +85,15 @@ void drawSnake() {
 }
 
 void drawHead() {
+  int s = curve.size();
   for (int i = 0; i < headSize-1; i++) {
-    drawBase(getHeadBase(headPositions[i], i), getHeadBase(headPositions[i+1], i+1));
+    boolean petr1 = gameOver && abs(i+s-collisionInd) < petrifyInd;
+    boolean petr2 = gameOver && abs(i+1+s-collisionInd) < petrifyInd;
+    drawBase(getHeadBase(headPositions[i], i), getHeadBase(headPositions[i+1], i+1), petr1, petr2);
   }
 }
 
-void drawBase(PVector[] base1, PVector[] base2) {
+void drawBase(PVector[] base1, PVector[] base2, boolean petr1, boolean petr2) {
   pushMatrix();
   beginShape(TRIANGLE_STRIP);
   texture(skin);
@@ -97,12 +101,29 @@ void drawBase(PVector[] base1, PVector[] base2) {
     int j = i%snakeQuality;
     float pos = (float)i/snakeQuality;
     float k = 0.3;
+    color tint = #4D984D;
     if (pos > k && pos < 1-k)
-      tint(#F8FFE5);
-    else
-      tint(#4D984D);
+      tint = #F8FFE5;
+    if (petr1) {
+      specular(40);
+      shininess(10);
+      tint(30);
+    } else {
+      specular(188);
+      shininess(50);
+      tint(tint);
+    }
     normal(base1[j*2]);
     vertex(base1[j*2+1], pos, 0);
+    if (petr2) {
+      specular(40);
+      shininess(10);
+      tint(30);
+    } else {
+      specular(188);
+      shininess(50);
+      tint(tint);
+    }
     normal(base2[j*2]);
     vertex(base2[j*2+1], pos, 1);
   }

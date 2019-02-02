@@ -3,6 +3,10 @@ PVector startDir = new PVector(0, 0, 1);
 PVector upCamDir = new PVector(0, 1, 0);
 float camDist;
 
+float boxSide;
+int collisionInd = -1;
+int petrifyInd = -1;
+
 void drawBackground() {
   PMatrix3D rot = camera.mat.get();
   rot.invert();
@@ -35,6 +39,7 @@ void setProjection() {
 void sceneSetup() {
   camera = new Segment();
   setFood();
+  boxSide = maxR*50;
 }
 
 void updateScene() {
@@ -49,6 +54,40 @@ void updateScene() {
     for (int i = 0; i < curve.size(); i++)
       curve.get(i).updateRad(i, curve.size());
   }
+  PVector pos = new PVector();
+  head.mat.mult(startDir, pos);
+  pos.setMag(headLength * 2/3);
+  pos.add(head.pos);
+  curFoodR = constrain(pos.dist(foodPos)-maxR,0,foodR);
+  if (checkBorder(pos)) {
+    gameOver = true;
+    collisionInd = curve.size();
+  } else {
+    if (checkSelfCollision(pos)) {
+      gameOver = true;
+    }
+  }
+  if (gameOver)
+    petrifyInd+=3;
+  paused = gameOver;
+}
+
+boolean checkBorder(PVector pos) {
+  if (abs(pos.x) > boxSide/2 - maxR) return true;
+  if (abs(pos.y) > boxSide/2 - maxR) return true;
+  if (abs(pos.z) > boxSide/2 - maxR) return true;
+  return false;
+}
+
+boolean checkSelfCollision(PVector pos) {
+  for (int i = 0; i < curve.size(); i++) {
+    Segment s = curve.get(i);
+    if (PVector.sub(pos, s.pos).mag() < maxR + s.r) {
+      collisionInd = i;
+      return true;
+    }
+  }
+  return false;
 }
 
 void lightSetup() {
@@ -78,10 +117,10 @@ void drawBorder() {
   PMatrix3D mat = new PMatrix3D();
   getMatrix(mat);
   boxShader.set("model", mat);
-  boxShader.set("boxSide", maxR*100);
-  boxShader.set("start", 600.0);
+  boxShader.set("boxSide", boxSide);
+  boxShader.set("start", boxSide*0.4);
   shader(boxShader);
-  border(maxR*50);
+  border(boxSide);
 }
 
 void border(float a) {
