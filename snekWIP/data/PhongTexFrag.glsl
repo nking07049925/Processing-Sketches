@@ -33,6 +33,16 @@ uniform vec3 lightFalloff[8];
 uniform vec2 lightSpot[8];
 uniform vec2 texOffset;
 
+uniform mat4 model;
+
+uniform int eatenFoodCount;
+uniform vec3 eatenFood[4];
+uniform vec3 eatenFoodColor[4];
+uniform float foodRad;
+uniform float foodBrightness;
+
+const float deltaRad = 30;
+
 uniform bool backCull;
 
 in vec4 vAmbient;
@@ -100,9 +110,16 @@ void main() {
   vec3 totalFrontDiffuse = vec3(0, 0, 0);
   vec3 totalFrontSpecular = vec3(0, 0, 0);
   
-  //vec3 totalBackDiffuse = vec3(0, 0, 0);
-  //vec3 totalBackSpecular = vec3(0, 0, 0);
-  
+  for (int i = 0; i < 4; i++) {
+    if (eatenFoodCount == i) break;
+
+    float dist = distance(ecVertex.xyz, (vec4(eatenFood[i],1.0) * model).xyz);
+    if (dist < foodRad) {
+      float k = 1.0 - smoothstep(foodRad - deltaRad, foodRad, dist);
+      emissive += vec4(eatenFoodColor[i] * k * foodBrightness, 0.0);
+    }
+  }
+
   for (int i = 0; i < 8; i++) {
     if (lightCount == i) break;
     
@@ -134,15 +151,11 @@ void main() {
     if (any(greaterThan(lightDiffuse[i], zero_vec3))) {
       totalFrontDiffuse  += lightDiffuse[i] * falloff * spotf * 
                             lambertFactor(lightDir, ecNormal);
-      //totalBackDiffuse   += lightDiffuse[i] * falloff * spotf * 
-      //                      lambertFactor(lightDir, ecNormalInv);
     }
-    
+
     if (any(greaterThan(lightSpecular[i], zero_vec3))) {
       totalFrontSpecular += lightSpecular[i] * falloff * spotf * 
                             blinnPhongFactor(lightDir, ecVertex, ecNormal, shininess);
-      //totalBackSpecular  += lightSpecular[i] * falloff * spotf * 
-      //                      blinnPhongFactor(lightDir, ecVertex, ecNormalInv, shininess);
     }     
   }    
 
@@ -150,14 +163,9 @@ void main() {
   // Transparency is determined exclusively by the diffuse component.
   vec4 vertColor =			vec4(totalAmbient, 0) * ambient + 
 												vec4(totalFrontDiffuse, 1) * color + 
-												vec4(totalFrontSpecular, 0) * specular + 
-												vec4(emissive.rgb, 0);
-  vertColor *= texture2D(texture, vertTexCoord.st);
-  /*
-  vec4 backVertColor = 	vec4(totalAmbient, 0) * ambient + 
-												vec4(totalBackDiffuse, 1) * color + 
-												vec4(totalBackSpecular, 0) * specular + 
-												vec4(emissive.rgb, 0);*/
+												vec4(totalFrontSpecular, 0) * specular;
+  vertColor = vertColor * texture2D(texture, vertTexCoord.st) + vec4(emissive.rgb, 0);
+  
   vec4 backVertColor = vec4(totalAmbient * ambient.rgb, 1.0);
 	
   gl_FragColor = (gl_FrontFacing ? vertColor : backVertColor);

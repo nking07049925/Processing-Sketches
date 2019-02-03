@@ -53,12 +53,17 @@ void updateScene() {
     head.pos.add(moveDir);
     camera.mat = head.mat.get();
     camera.pos = head.pos.copy();
-    snake.add(head.copy());
-    if (snake.size() >= curSnakeLength * dist)
+    Segment temp = head.copy();
+    snake.add(head);
+    head = temp.copy();
+    if (snake.size() >= curSnakeLength * dist) {
+      if (eatenFoodCount > 0 && snake.get(0) == eaten[0].seg) {
+        removeFood();
+      }
       snake.remove(0);
+    }
     for (int i = 0; i < snake.size(); i++)
       snake.get(i).updateRad(i, snake.size());
-
     head.mat.mult(startDir, headPos);
     headPos.setMag(headLength * 2/3);
     headPos.add(head.pos);
@@ -66,6 +71,7 @@ void updateScene() {
   curFoodR = constrain(headPos.dist(foodPos)-maxR, 0, foodR);
   if (curFoodR <= maxR*0.5) {
     foodEaten++;
+    addFood(head);
     setFood();
     curSnakeLength += snakeIncrease;
     desiredSpeed += speedIncrease;
@@ -79,12 +85,14 @@ void updateScene() {
     }
   }
   if (gameOver) {
+    curFoodBrightness *= 0.95;
     petrifyInd += step * 0.04;
     particleSpeed = step;
     clearInd = petrifyInd/2;
     step++;
   }
   phongTex.set("backCull", !gameOver);
+  turnSnake();
 }
 
 boolean checkBorder(PVector pos) {

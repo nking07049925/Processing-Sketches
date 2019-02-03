@@ -23,7 +23,7 @@ float headAngleFunc(float x) {
 
 float maxR;
 int dist = 3;
-int curSnakeLength = 40;
+int curSnakeLength;
 float moveSpeed;
 float desiredSpeed;
 int snakeIncrease = 20;
@@ -34,6 +34,11 @@ void snakeSetup() {
   maxR = width/60f;
   desiredSpeed = maxR*0.2;
   speedIncrease = moveSpeed * 0.03;
+  curSnakeLength = 40;
+  collisionInd = -1;
+  petrifyInd = 0;
+  clearInd = 0;
+  step = 0;
   
   headPos = new PVector(0,0,maxR*2);
 
@@ -44,6 +49,7 @@ void snakeSetup() {
   baseNorm = baseShape.clone();
   int max = curSnakeLength*dist;
   headLength = maxR*4.0;
+  snake = new ArrayList<Segment>();
   for (int i = 0; i < max; i++) {
     Segment seg = new Segment(new PVector(0, 0, -(max+1-i)*desiredSpeed)); 
     snake.add(seg);
@@ -54,7 +60,7 @@ void snakeSetup() {
     float x = i/(headSize-1f);
     headPositions[i] = new Segment(new PVector(0, 0, x*headLength), new PMatrix3D(), maxR*headFunc(x));
     float deg = headAngleFunc(x);
-    headNormals[i] = new float[] { cos(deg)*maxR/headLength, sin(deg) };
+    headNormals[i] = new float[] { cos(deg)*maxR/headLength, sin(deg)};
   }
   head = new Segment();
 }
@@ -120,8 +126,8 @@ void drawSnake() {
       translate(0, -maxR, headLength*0.8);
       if (petr) {
         fill(60);
-        specular(60);
-        shininess(10);
+        specular(40);
+        shininess(5);
       } else {
         fill(10);
         specular(190);

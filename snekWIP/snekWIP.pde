@@ -19,13 +19,14 @@ PostFX fx;
 Robot robot;
 
 boolean gameOver = false;
+boolean mouseEnabled = false;
 
 void setup() {
   fullScreen(P3D);
-  //size(1080, 720, P3D);
+  
+  
   fx = new PostFX(this);
   noCursor();
-  //noSmooth();
   textureMode(NORMAL);
   phong = loadShader("PhongFrag.glsl", "PhongVert.glsl");
   phongTex = loadShader("PhongTexFrag.glsl", "PhongTexVert.glsl");
@@ -36,19 +37,9 @@ void setup() {
   skySphere.set("camDist", camDist*0.7);
   sky = loadImage("sky.jpg");
   skin = loadImage("skin.jpg");
-  //stroke(255);
-  //noFill();
   noStroke();
   fill(255);
-  textSize(50);/*
-  for (int i = -10; i < 11; i++) {
-   PMatrix3D temp = new PMatrix3D();
-   temp.scale(r);
-   curve.add(new PosAngle(
-   new PVector(0,0,i*40),
-   temp
-   ));
-   }*/
+  textSize(50);
   snakeSetup();
   sceneSetup();
   initParticles();
@@ -63,13 +54,22 @@ void setup() {
 float rotSpeed = 0.05;
 
 boolean paused = true;
+boolean launch = true;
 
 void draw() {
   drawBackground();
-  shader(phongTex);
   setProjection();
   lightSetup();
   foodLight();
+  PMatrix3D mat = new PMatrix3D();
+  getMatrix(mat);
+  phongTex.set("model", mat);
+  phongTex.set("eatenFood", getFoodPosition(), 3);
+  phongTex.set("eatenFoodColor", getFoodColor(), 3);
+  phongTex.set("eatenFoodCount", eatenFoodCount);
+  phongTex.set("foodBrightness", curFoodBrightness);
+  phongTex.set("foodRad", maxR*2);
+  shader(phongTex);
   drawSnake();
   noLights();
   fill(255,0,0);
@@ -86,10 +86,16 @@ void draw() {
   float textHeight = height*0.03;
   textSize(textHeight);
   textAlign(CENTER, CENTER);
-  if (paused)
-    text("PRESS SPACE TO START", width/2, height*3/4);
-  if (gameOver) {
+  if (paused) {
+    if (launch) text("PRESS SPACE TO START", width/2, height*3/4);
+    else text("PRESS SPACE TO UNPAUSE", width/2, height*3/4);
+    text("USE DIRECTIONAL KEYS TO CONTROL THE SNAKE", width/2, height*3/4+textHeight*1.5);
+    text("PRESS CTRL TO ENABLE MOUSE CONTROLS", width/2, height*3/4+textHeight*3.0);
+    text("PRESS SHIFT TO FLIP THE VERTICAL AXIS FOR KEYS", width/2, height*3/4+textHeight*4.5);
+    text("PRESS ALT TO FLIP THE VERTICAL AXIS FOR MOUSE", width/2, height*3/4+textHeight*6.0);
+  } if (gameOver) {
     text("GAME OVER", width/2, height*3/4);
-    text("YOU HAVE EATEN " + foodEaten + " STAR" + (foodEaten>1?"S":""), width/2, height*3/4+textHeight);
+    text("YOU HAVE EATEN " + foodEaten + " STAR" + (foodEaten==1?"":"S"), width/2, height*3/4+textHeight*1.5);
+    text("PRESS SPACE TO RESTART", width/2, height*3/4+textHeight*3.0);
   }
 }
