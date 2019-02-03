@@ -5,7 +5,9 @@ float camDist;
 
 float boxSide;
 int collisionInd = -1;
-int petrifyInd = -1;
+float petrifyInd = 0;
+float clearInd = 0;
+int step = 0;
 
 void drawBackground() {
   PMatrix3D rot = camera.mat.get();
@@ -49,10 +51,10 @@ void updateScene() {
   if (!paused) {
     head.pos.add(moveDir);
     camera.pos = head.pos.copy();
-    curve.add(camera.copy());
-    curve.remove(0);
-    for (int i = 0; i < curve.size(); i++)
-      curve.get(i).updateRad(i, curve.size());
+    snake.add(camera.copy());
+    snake.remove(0);
+    for (int i = 0; i < snake.size(); i++)
+      snake.get(i).updateRad(i, snake.size());
   }
   PVector pos = new PVector();
   head.mat.mult(startDir, pos);
@@ -61,15 +63,19 @@ void updateScene() {
   curFoodR = constrain(pos.dist(foodPos)-maxR,0,foodR);
   if (checkBorder(pos)) {
     gameOver = true;
-    collisionInd = curve.size();
+    collisionInd = snake.size() + headSize;
   } else {
     if (checkSelfCollision(pos)) {
       gameOver = true;
     }
   }
-  if (gameOver)
-    petrifyInd+=3;
+  if (gameOver) {
+    petrifyInd+=step*0.01;
+    clearInd = petrifyInd/2;
+    step++;
+  }
   paused = gameOver;
+  phongTex.set("backCull", !gameOver);
 }
 
 boolean checkBorder(PVector pos) {
@@ -80,8 +86,8 @@ boolean checkBorder(PVector pos) {
 }
 
 boolean checkSelfCollision(PVector pos) {
-  for (int i = 0; i < curve.size(); i++) {
-    Segment s = curve.get(i);
+  for (int i = 0; i < snake.size(); i++) {
+    Segment s = snake.get(i);
     if (PVector.sub(pos, s.pos).mag() < maxR + s.r) {
       collisionInd = i;
       return true;

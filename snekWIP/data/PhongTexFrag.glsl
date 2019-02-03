@@ -33,6 +33,8 @@ uniform vec3 lightFalloff[8];
 uniform vec2 lightSpot[8];
 uniform vec2 texOffset;
 
+uniform bool backCull;
+
 in vec4 vAmbient;
 in vec4 vSpecular;
 in vec4 vEmissive;
@@ -74,13 +76,18 @@ float blinnPhongFactor(vec3 lightDir, vec3 vertPos, vec3 vecNormal, float shine)
 }
 
 void main() {
-	if (!gl_FrontFacing)
+	if (backCull && !gl_FrontFacing)
 		discard;
 
 	vec3 ecNormal = normalize(vEcNormal);
   vec3 ecNormalInv = ecNormal * -one_float;
 	
 	vec4 color = vColor;
+
+  if (color.a < 0.5)
+    discard;
+
+  color.a = 1.0;
 	
 	vec4 ambient = vAmbient;
 	vec4 specular = vSpecular;
@@ -93,8 +100,8 @@ void main() {
   vec3 totalFrontDiffuse = vec3(0, 0, 0);
   vec3 totalFrontSpecular = vec3(0, 0, 0);
   
-  vec3 totalBackDiffuse = vec3(0, 0, 0);
-  vec3 totalBackSpecular = vec3(0, 0, 0);
+  //vec3 totalBackDiffuse = vec3(0, 0, 0);
+  //vec3 totalBackSpecular = vec3(0, 0, 0);
   
   for (int i = 0; i < 8; i++) {
     if (lightCount == i) break;
@@ -127,15 +134,15 @@ void main() {
     if (any(greaterThan(lightDiffuse[i], zero_vec3))) {
       totalFrontDiffuse  += lightDiffuse[i] * falloff * spotf * 
                             lambertFactor(lightDir, ecNormal);
-      totalBackDiffuse   += lightDiffuse[i] * falloff * spotf * 
-                            lambertFactor(lightDir, ecNormalInv);
+      //totalBackDiffuse   += lightDiffuse[i] * falloff * spotf * 
+      //                      lambertFactor(lightDir, ecNormalInv);
     }
     
     if (any(greaterThan(lightSpecular[i], zero_vec3))) {
       totalFrontSpecular += lightSpecular[i] * falloff * spotf * 
                             blinnPhongFactor(lightDir, ecVertex, ecNormal, shininess);
-      totalBackSpecular  += lightSpecular[i] * falloff * spotf * 
-                            blinnPhongFactor(lightDir, ecVertex, ecNormalInv, shininess);
+      //totalBackSpecular  += lightSpecular[i] * falloff * spotf * 
+      //                      blinnPhongFactor(lightDir, ecVertex, ecNormalInv, shininess);
     }     
   }    
 
@@ -145,11 +152,13 @@ void main() {
 												vec4(totalFrontDiffuse, 1) * color + 
 												vec4(totalFrontSpecular, 0) * specular + 
 												vec4(emissive.rgb, 0);
-              
+  vertColor *= texture2D(texture, vertTexCoord.st);
+  /*
   vec4 backVertColor = 	vec4(totalAmbient, 0) * ambient + 
 												vec4(totalBackDiffuse, 1) * color + 
 												vec4(totalBackSpecular, 0) * specular + 
-												vec4(emissive.rgb, 0);
+												vec4(emissive.rgb, 0);*/
+  vec4 backVertColor = vec4(totalAmbient * ambient.rgb, 1.0);
 	
-  gl_FragColor = texture2D(texture, vertTexCoord.st) * (gl_FrontFacing ? vertColor : backVertColor);
+  gl_FragColor = (gl_FrontFacing ? vertColor : backVertColor);
 }
