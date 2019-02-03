@@ -20,7 +20,6 @@ float headAngleFunc(float x) {
   return x < 0.5 ? atan(sin(x*TWO_PI)*PI*offs)+HALF_PI : atan(-2*(1+offs)*(2*x-1)/sqrt(1-sq(2*x-1)))+HALF_PI;
 }
 
-
 float maxR;
 int dist = 3;
 int startLength = 200;
@@ -40,6 +39,7 @@ void snakeSetup() {
   for (int i = 0; i < max+1; i++) {
     Segment seg = new Segment(new PVector(0, 0, -(max+1-i)*moveSpeed)); 
     snake.add(seg);
+    seg.updateRad(i, max+1);
   }
 
   for (int i = 0; i < headSize; i++) {
@@ -56,12 +56,27 @@ void drawSnake() {
   int s = snake.size();
   Segment last = snake.get(s - 1);
   if (s > dist) {
-    PVector[] prev = getBase(snake.get(0));
+    Segment prevSeg = snake.get(0);
+    PVector[] prev = getBase(prevSeg);
     for (int i = (s-1)%dist; i < s; i+=dist) {
-      Segment pa = snake.get(i);
-      PVector[] cur = getBase(pa);
+      Segment seg = snake.get(i);
+      PVector[] cur = getBase(seg);
       drawBase(prev, cur, i-dist, i);
+      if (gameOver) {
+        float collisionDist = abs(i - collisionInd); 
+        if (collisionDist < clearInd && collisionDist > clearInd - dist) {
+          PVector dir = PVector.sub(seg.pos, prevSeg.pos);
+          dir.setMag(-sign(i - collisionInd));
+          for (int j = 0; j < particleSegment; j++) {
+            int ind = floor(random(cur.length/2));
+            PVector pos = cur[ind*2+1].copy();
+            pos.add(PVector.mult(dir, random(moveSpeed*dist*2)));
+            addParticle(pos, dir, 1 -seg.r/maxR);
+          }
+        }
+      }
       prev = cur;
+      prevSeg = seg;
     }
     PVector[] cur = getBase(last);
     drawBase(prev, cur, s-dist-1, s-1);
@@ -69,6 +84,23 @@ void drawSnake() {
     translate(last.pos);
     applyMatrix(last.mat);
     drawHead();
+    if (gameOver) {
+      PVector headDir = new PVector();
+      last.mat.mult(startDir, headDir);
+      headDir.normalize();
+      for (int i = 0; i < headSize; i++) {
+        float collisionDist = abs(i+snake.size() - collisionInd);
+        PVector pos = head.pos.copy();
+        pos.add(PVector.mult(headDir, headLength*i/headSize));
+        if (collisionDist < clearInd && collisionDist > clearInd - dist) {
+          for (int j = 0; j < particleSegment; j++) {
+            PVector noise = new PVector(random(-1, 1), random(-1, 1), random(-1, 1));
+            noise.normalize();
+            addParticle(PVector.add(pos, PVector.mult(noise, maxR*0.7)), noise);
+          }
+        }
+      }
+    }
     shader(phong);
     float eyeInd = snake.size()+headSize*0.8;
     boolean petr = gameOver && abs(eyeInd-collisionInd) < petrifyInd;
@@ -99,7 +131,9 @@ void drawSnake() {
 void drawHead() {
   int s = snake.size();
   for (int i = 0; i < headSize-1; i++) {
-    drawBase(getHeadBase(headPositions[i], i), getHeadBase(headPositions[i+1], i+1), i+s, i+1+s);
+    PVector[] curBase = getHeadBase(headPositions[i], i);
+    PVector[] nextBase = getHeadBase(headPositions[i+1], i+1);
+    drawBase(curBase, nextBase, i+s, i+1+s);
   }
 }
 
@@ -111,8 +145,6 @@ void drawBase(PVector[] base1, PVector[] base2, int ind1, int ind2) {
   float diff2 = abs(ind2-collisionInd);
   boolean petr1 = gameOver && diff1 < petrifyInd;
   boolean petr2 = gameOver && diff2 < petrifyInd;
-  boolean clear1 = gameOver && diff1 < clearInd;
-  boolean clear2 = gameOver && diff2 < clearInd;
   float petr1k = smoothstep(petrifyInd-10, petrifyInd, diff1);
   float petr2k = smoothstep(petrifyInd-10, petrifyInd, diff2);
   float alpha1 = 255*smoothstep(clearInd-5, clearInd, diff1);

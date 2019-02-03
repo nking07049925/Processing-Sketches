@@ -48,10 +48,11 @@ void updateScene() {
   PVector moveDir = new PVector();
   head.mat.mult(startDir, moveDir);
   moveDir.setMag(moveSpeed);
-  if (!paused) {
+  if (!paused && !gameOver) {
     head.pos.add(moveDir);
+    camera.mat = head.mat.get();
     camera.pos = head.pos.copy();
-    snake.add(camera.copy());
+    snake.add(head.copy());
     snake.remove(0);
     for (int i = 0; i < snake.size(); i++)
       snake.get(i).updateRad(i, snake.size());
@@ -60,7 +61,7 @@ void updateScene() {
   head.mat.mult(startDir, pos);
   pos.setMag(headLength * 2/3);
   pos.add(head.pos);
-  curFoodR = constrain(pos.dist(foodPos)-maxR,0,foodR);
+  curFoodR = constrain(pos.dist(foodPos)-maxR, 0, foodR);
   if (checkBorder(pos)) {
     gameOver = true;
     collisionInd = snake.size() + headSize;
@@ -70,11 +71,12 @@ void updateScene() {
     }
   }
   if (gameOver) {
-    petrifyInd+=step*0.01;
+    petrifyInd += step * 0.04;
+    particleSpeed = step;
     clearInd = petrifyInd/2;
     step++;
   }
-  paused = gameOver;
+  //paused = gameOver;
   phongTex.set("backCull", !gameOver);
 }
 
@@ -101,7 +103,7 @@ void lightSetup() {
   directionalLight(68, 68, 48, -1, 1, -1);
   directionalLight(20, 20, 30, 1, 0, 1);
 }
-  
+
 void setCamera() {  
   Segment temp = camera.copy();
   PVector ndir = new PVector();

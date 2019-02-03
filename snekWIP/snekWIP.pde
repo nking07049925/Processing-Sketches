@@ -10,6 +10,7 @@ PShader phong;
 PShader phongTex;
 PShader skySphere;
 PShader boxShader;
+PShader pointShader;
 
 PImage sky;
 PImage skin;
@@ -29,6 +30,7 @@ void setup() {
   phong = loadShader("PhongFrag.glsl", "PhongVert.glsl");
   phongTex = loadShader("PhongTexFrag.glsl", "PhongTexVert.glsl");
   boxShader = loadShader("boxFrag.glsl", "boxVert.glsl");
+  pointShader = loadShader("pointFrag.glsl","pointVert.glsl");
   camDist = (height/2.0) / tan(PI*30.0 / 180.0);
   skySphere = loadShader("skyFrag.glsl");
   skySphere.set("camDist", camDist*0.7);
@@ -49,6 +51,7 @@ void setup() {
    }*/
   snakeSetup();
   sceneSetup();
+  initParticles();
   try {
     robot = new Robot();
   } 
@@ -73,6 +76,7 @@ void draw() {
   drawBorder();
   resetShader();
   drawFood();
+  drawParticles();
   updateScene();
   perspective();
   fx.render().bloom(0.95, 30, 10).compose();

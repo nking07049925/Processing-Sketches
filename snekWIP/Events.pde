@@ -9,12 +9,13 @@ void mouseMoved() {
     float dx = (mouseX - pmouseX)/500f;
     dx = constrain(dx, -rotSpeed, rotSpeed);
     camera.mat.rotateY(-dx);
-    if (!paused) {
+    if (!paused && !gameOver) {
       head.mat.rotateX(dy);
       head.mat.rotateY(-dx);
     }
   }
 }
+
 
 boolean leftPressed;
 boolean rightPressed;
