@@ -33,7 +33,7 @@ float speedEasing = 0.03;
 void snakeSetup() {
   maxR = width/60f;
   desiredSpeed = maxR*0.2;
-  speedIncrease = moveSpeed * 0.03;
+  speedIncrease = moveSpeed * 0.05;
   curSnakeLength = 40;
   collisionInd = -1;
   petrifyInd = 0;
