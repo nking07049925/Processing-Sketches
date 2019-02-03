@@ -40,33 +40,41 @@ void setProjection() {
 
 void sceneSetup() {
   camera = new Segment();
-  setFood();
   boxSide = maxR*50;
+  setFood();
 }
 
 void updateScene() {
-  PVector moveDir = new PVector();
-  head.mat.mult(startDir, moveDir);
-  moveDir.setMag(moveSpeed);
   if (!paused && !gameOver) {
+    moveSpeed += (desiredSpeed - moveSpeed)*speedEasing;
+    PVector moveDir = new PVector();
+    head.mat.mult(startDir, moveDir);
+    moveDir.setMag(moveSpeed);
     head.pos.add(moveDir);
     camera.mat = head.mat.get();
     camera.pos = head.pos.copy();
     snake.add(head.copy());
-    snake.remove(0);
+    if (snake.size() >= curSnakeLength * dist)
+      snake.remove(0);
     for (int i = 0; i < snake.size(); i++)
       snake.get(i).updateRad(i, snake.size());
+
+    head.mat.mult(startDir, headPos);
+    headPos.setMag(headLength * 2/3);
+    headPos.add(head.pos);
   }
-  PVector pos = new PVector();
-  head.mat.mult(startDir, pos);
-  pos.setMag(headLength * 2/3);
-  pos.add(head.pos);
-  curFoodR = constrain(pos.dist(foodPos)-maxR, 0, foodR);
-  if (checkBorder(pos)) {
+  curFoodR = constrain(headPos.dist(foodPos)-maxR, 0, foodR);
+  if (curFoodR <= maxR*0.5) {
+    foodEaten++;
+    setFood();
+    curSnakeLength += snakeIncrease;
+    desiredSpeed += speedIncrease;
+  }
+  if (checkBorder(headPos)) {
     gameOver = true;
     collisionInd = snake.size() + headSize;
   } else {
-    if (checkSelfCollision(pos)) {
+    if (checkSelfCollision(headPos)) {
       gameOver = true;
     }
   }
@@ -76,7 +84,6 @@ void updateScene() {
     clearInd = petrifyInd/2;
     step++;
   }
-  //paused = gameOver;
   phongTex.set("backCull", !gameOver);
 }
 
@@ -111,17 +118,13 @@ void setCamera() {
   temp.mat.mult(startDir, ndir);
   temp.mat.mult(upCamDir, nup);
   temp.pos.sub(PVector.mult(nup, maxR*4));
-  temp.pos.sub(PVector.mult(ndir, maxR*moveSpeed));
+  temp.pos.sub(PVector.mult(ndir, maxR*3 + maxR*moveSpeed*0.3));
   camera(temp.pos, ndir, nup);
 }
 
 void drawBorder() {
   fill(255, 255, 255);
-  PVector pos = new PVector();
-  head.mat.mult(startDir, pos);
-  pos.setMag(headLength * 2/3);
-  pos.add(head.pos);
-  boxShader.set("pointPos", pos.x, pos.y, pos.z, 1.0);
+  boxShader.set("pointPos", headPos.x, headPos.y, headPos.z, 1.0);
   PMatrix3D mat = new PMatrix3D();
   getMatrix(mat);
   boxShader.set("model", mat);

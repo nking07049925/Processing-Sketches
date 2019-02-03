@@ -79,9 +79,7 @@ void draw() {
   drawParticles();
   updateScene();
   perspective();
-  fx.render().bloom(0.95, 30, 10).compose();
-  fill(255,0,0);
-  camera();
-  //text(gameOver?"dead":"alive", 0, 50);
   fill(255);
+  tint(255);
+  fx.render().bloom(0.4, 30, 10).compose();
 }

@@ -16,6 +16,10 @@ void mouseMoved() {
   }
 }
 
+void mousePressed() {
+  setFood();
+}
+
 
 boolean leftPressed;
 boolean rightPressed;

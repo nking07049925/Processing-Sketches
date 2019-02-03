@@ -3,6 +3,7 @@ PVector[] baseShape = new PVector[snakeQuality];
 PVector[] baseNorm = new PVector[snakeQuality];
 ArrayList<Segment> snake = new ArrayList<Segment>();
 int headSize = 7;
+PVector headPos = new PVector();
 Segment[] headPositions = new Segment[headSize];
 float[][] headNormals = new float[headSize][2];
 float headLength;
@@ -22,22 +23,29 @@ float headAngleFunc(float x) {
 
 float maxR;
 int dist = 3;
-int startLength = 200;
+int curSnakeLength = 40;
 float moveSpeed;
+float desiredSpeed;
+int snakeIncrease = 20;
+float speedIncrease;
+float speedEasing = 0.03;
 
 void snakeSetup() {
   maxR = width/60f;
-  moveSpeed = maxR/5;
+  desiredSpeed = maxR*0.3;
+  speedIncrease = moveSpeed * 0.03;
+  
+  headPos = new PVector(0,0,maxR*2);
 
   for (int i = 0; i < snakeQuality; i++) {
     float deg = -(i-0.5)*TWO_PI/snakeQuality - HALF_PI;
     baseShape[i] = new PVector(cos(deg), sin(deg));
   }
   baseNorm = baseShape.clone();
-  int max = startLength*(dist+1);
+  int max = curSnakeLength*dist;
   headLength = maxR*4.0;
-  for (int i = 0; i < max+1; i++) {
-    Segment seg = new Segment(new PVector(0, 0, -(max+1-i)*moveSpeed)); 
+  for (int i = 0; i < max; i++) {
+    Segment seg = new Segment(new PVector(0, 0, -(max+1-i)*desiredSpeed)); 
     snake.add(seg);
     seg.updateRad(i, max+1);
   }
@@ -70,7 +78,7 @@ void drawSnake() {
           for (int j = 0; j < particleSegment; j++) {
             int ind = floor(random(cur.length/2));
             PVector pos = cur[ind*2+1].copy();
-            pos.add(PVector.mult(dir, random(moveSpeed*dist*2)));
+            pos.add(PVector.mult(dir, random(desiredSpeed*dist*2)));
             addParticle(pos, dir, 1 -seg.r/maxR);
           }
         }
