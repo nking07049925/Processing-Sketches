@@ -3,6 +3,12 @@ PVector startDir = new PVector(0, 0, 1);
 PVector upCamDir = new PVector(0, 1, 0);
 float camDist;
 
+float boxSide;
+int collisionInd = -1;
+float petrifyInd = 0;
+float clearInd = 0;
+int step = 0;
+
 void drawBackground() {
   PMatrix3D rot = camera.mat.get();
   rot.invert();
@@ -34,21 +40,77 @@ void setProjection() {
 
 void sceneSetup() {
   camera = new Segment();
+  boxSide = maxR*50;
   setFood();
 }
 
 void updateScene() {
-  PVector moveDir = new PVector();
-  head.mat.mult(startDir, moveDir);
-  moveDir.setMag(moveSpeed);
-  if (!paused) {
+  if (!paused && !gameOver) {
+    moveSpeed += (desiredSpeed - moveSpeed)*speedEasing;
+    PVector moveDir = new PVector();
+    head.mat.mult(startDir, moveDir);
+    moveDir.setMag(moveSpeed);
     head.pos.add(moveDir);
+    camera.mat = head.mat.get();
     camera.pos = head.pos.copy();
-    curve.add(camera.copy());
-    curve.remove(0);
-    for (int i = 0; i < curve.size(); i++)
-      curve.get(i).updateRad(i, curve.size());
+    Segment temp = head.copy();
+    snake.add(head);
+    head = temp.copy();
+    if (snake.size() >= curSnakeLength * dist) {
+      if (eatenFoodCount > 0 && snake.get(0) == eaten[0].seg) {
+        removeFood();
+      }
+      snake.remove(0);
+    }
+    for (int i = 0; i < snake.size(); i++)
+      snake.get(i).updateRad(i, snake.size());
+    head.mat.mult(startDir, headPos);
+    headPos.setMag(headLength * 2/3);
+    headPos.add(head.pos);
   }
+  curFoodR = constrain(headPos.dist(foodPos)-maxR, 0, foodR);
+  if (curFoodR <= maxR*0.5) {
+    foodEaten++;
+    addFood(head);
+    setFood();
+    curSnakeLength += snakeIncrease;
+    desiredSpeed += speedIncrease;
+  }
+  if (checkBorder(headPos)) {
+    gameOver = true;
+    collisionInd = snake.size() + headSize;
+  } else {
+    if (checkSelfCollision(headPos)) {
+      gameOver = true;
+    }
+  }
+  if (gameOver) {
+    curFoodBrightness *= 0.95;
+    petrifyInd += step * 0.04;
+    particleSpeed = step;
+    clearInd = petrifyInd/2;
+    step++;
+  }
+  phongTex.set("backCull", !gameOver);
+  turnSnake();
+}
+
+boolean checkBorder(PVector pos) {
+  if (abs(pos.x) > boxSide/2 - maxR) return true;
+  if (abs(pos.y) > boxSide/2 - maxR) return true;
+  if (abs(pos.z) > boxSide/2 - maxR) return true;
+  return false;
+}
+
+boolean checkSelfCollision(PVector pos) {
+  for (int i = 0; i < snake.size(); i++) {
+    Segment s = snake.get(i);
+    if (PVector.sub(pos, s.pos).mag() < maxR + s.r) {
+      collisionInd = i;
+      return true;
+    }
+  }
+  return false;
 }
 
 void lightSetup() {
@@ -56,7 +118,7 @@ void lightSetup() {
   directionalLight(68, 68, 48, -1, 1, -1);
   directionalLight(20, 20, 30, 1, 0, 1);
 }
-  
+
 void setCamera() {  
   Segment temp = camera.copy();
   PVector ndir = new PVector();
@@ -64,24 +126,20 @@ void setCamera() {
   temp.mat.mult(startDir, ndir);
   temp.mat.mult(upCamDir, nup);
   temp.pos.sub(PVector.mult(nup, maxR*4));
-  temp.pos.sub(PVector.mult(ndir, maxR*moveSpeed));
+  temp.pos.sub(PVector.mult(ndir, maxR*3 + maxR*moveSpeed*0.3));
   camera(temp.pos, ndir, nup);
 }
 
 void drawBorder() {
   fill(255, 255, 255);
-  PVector pos = new PVector();
-  head.mat.mult(startDir, pos);
-  pos.setMag(headLength * 2/3);
-  pos.add(head.pos);
-  boxShader.set("pointPos", pos.x, pos.y, pos.z, 1.0);
+  boxShader.set("pointPos", headPos.x, headPos.y, headPos.z, 1.0);
   PMatrix3D mat = new PMatrix3D();
   getMatrix(mat);
   boxShader.set("model", mat);
-  boxShader.set("boxSide", maxR*100);
-  boxShader.set("start", 600.0);
+  boxShader.set("boxSide", boxSide);
+  boxShader.set("start", boxSide*0.4);
   shader(boxShader);
-  border(maxR*50);
+  border(boxSide);
 }
 
 void border(float a) {
