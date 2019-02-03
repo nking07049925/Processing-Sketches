@@ -82,4 +82,14 @@ void draw() {
   fill(255);
   tint(255);
   fx.render().bloom(0.4, 30, 10).compose();
+  camera();
+  float textHeight = height*0.03;
+  textSize(textHeight);
+  textAlign(CENTER, CENTER);
+  if (paused)
+    text("PRESS SPACE TO START", width/2, height*3/4);
+  if (gameOver) {
+    text("GAME OVER", width/2, height*3/4);
+    text("YOU HAVE EATEN " + foodEaten + " STAR" + (foodEaten>1?"S":""), width/2, height*3/4+textHeight);
+  }
 }
