@@ -1,10 +1,13 @@
 color pointColor = color(255);
 color pressedPointColor = color(200);
 color anchorColor = color(255, 128, 128);
+color activeAnchorColor = color(255, 210, 210);
 
 color curveColor = color(128);
 
 boolean editAnchors = false;
+
+int animationCount;
 
 void setup() {
   //fullScreen();
@@ -42,6 +45,16 @@ void draw() {
 void keyPressed() {
   if (key == ' ')
     editAnchors = !editAnchors;
+  if (key == 'a')
+    shape.addPoint(new Point(width/2, height/2));
+    
+  if (key == CODED && keyCode == SHIFT)
+    shift = true;
+}
+
+void keyReleased() {
+  if (key == CODED && keyCode == SHIFT)
+    shift = false;
 }
 
 void mousePressed() {

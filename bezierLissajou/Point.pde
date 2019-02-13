@@ -1,6 +1,8 @@
 float pointRad = 10;
 float dragDist = 20;
+float snapDist = 20;
 boolean pressed;
+boolean shift;
 
 class Point {
   float x;
@@ -26,6 +28,7 @@ class AnchorPoint {
   Point p;
   Point d1;
   Point d2;
+  boolean active;
   boolean pDrag;
   boolean d1Drag;
   boolean d2Drag;
@@ -36,8 +39,14 @@ class AnchorPoint {
     d2 = dir2;
   }
 
+  AnchorPoint(Point p) {
+    this.p = p;
+    d1 = p.get();
+    d2 = p.get();
+  }
+
   void draw() {
-    stroke(anchorColor);
+    stroke(active?activeAnchorColor:anchorColor);
     line(p, d1);
     line(p, d2);
     p.draw(pDrag?pressedPointColor:pointColor);
@@ -46,51 +55,62 @@ class AnchorPoint {
   }
 
   void press(float x, float y, boolean left) {
-    pressed = pressed && !left;
-    if (!pressed || left)
-      d1Drag = dist(x, y, d1.x, d1.y) < dragDist;
-    pressed = pressed || d1Drag;
-    if (!pressed || left)
-      d2Drag = dist(x, y, d2.x, d2.y) < dragDist;
-    pressed = pressed || d2Drag;
-    if (!pressed || left)
-      pDrag = (!pressed || left) && dist(x, y, p.x, p.y) < dragDist;
-    pressed = pressed || pDrag;
+    pressed = pressed && shift;
+    active = !pressed || !shift;
+    if (left) {
+      if (!pressed || !shift)
+        pDrag = dist(x, y, p.x, p.y) < dragDist;
+      pressed = pressed || pDrag;
+      if (!pressed || !shift)
+        d1Drag = dist(x, y, d1.x, d1.y) < dragDist;
+      pressed = pressed || d1Drag;
+      if (!pressed || !shift)
+        d2Drag = dist(x, y, d2.x, d2.y) < dragDist;
+      pressed = pressed || d2Drag;
+    } else {
+      if (!pressed || !shift)
+        d1Drag = dist(x, y, d1.x, d1.y) < dragDist;
+      pressed = pressed || d1Drag;
+      if (!pressed || !shift)
+        d2Drag = dist(x, y, d2.x, d2.y) < dragDist;
+      pressed = pressed || d2Drag;
+      if (!pressed || !shift)
+        pDrag = dist(x, y, p.x, p.y) < dragDist;
+      pressed = pressed || pDrag;
+    }
+    active = active && pressed;
   }
 
   void release(boolean left) {
     if (d1Drag || d2Drag || pDrag)
       pressed = false;
-    if (d1Drag && dist(d1, p) < pointRad) {
-      d1.x = p.x;
-      d1.y = p.y;
+    if (d1Drag && dist(d1, p) < snapDist) {
+      d1 = p.get();
     }  
-    if (d2Drag && dist(d2, p) < pointRad) {
-      d2.x = p.x;
-      d2.y = p.y;
+    if (d2Drag && dist(d2, p) < snapDist) {
+      d2 = p.get();
     }
-    if ((d1Drag || d2Drag) && dist(d1, d2) < pointRad) {
+    if ((d1Drag || d2Drag) && dist(d1, d2) < snapDist) {
       if (d1Drag) {
-        d1.x = d2.x;
-        d1.y = d2.y;
+        d1 = d2.get();
       }
       if (d2Drag) {
-        d2.x = d1.x;
-        d2.y = d1.y;
+        d2 = d1.get();
       }
     }
-    
+
+    active = false;
     d1Drag = false;
     d2Drag = false;
     pDrag = false;
   }
 
   void drag(float px, float py, float x, float y, boolean left) {
-    if (d1Drag || (pDrag && left)) {
+    if (d1Drag || (pDrag && left && !shift)) {
       d1.x += x - px;
       d1.y += y - py;
     }
-    if (d2Drag || (pDrag && left)) {
+    if (d2Drag || (pDrag && left && !shift)) {
       d2.x += x - px;
       d2.y += y - py;
     }
@@ -109,7 +129,6 @@ interface CurvedShape {
 class Curve implements CurvedShape {
   AnchorPoint p1;
   AnchorPoint p2;
-  color c;
 
   Curve(AnchorPoint start, AnchorPoint end) {
     p1 = start;
@@ -120,6 +139,18 @@ class Curve implements CurvedShape {
     noFill();
     stroke(curveColor);
     bezier(p1, p2);
+  }
+
+  Curve get() {
+    return new Curve(p1, p2);
+  }
+
+  void setEnd(AnchorPoint p) {
+    p2 = p;
+  }
+
+  void setStart(AnchorPoint p) {
+    p1 = p;
   }
 
   float coord(float t, float x1, float x2, float x3, float x4) {
@@ -141,11 +172,11 @@ class Shape implements CurvedShape {
 
   Shape(Point[] p, boolean polygon) {
     if (polygon) {
-      AnchorPoint first = new AnchorPoint(p[0], p[0].get(), p[0].get());
+      AnchorPoint first = new AnchorPoint(p[0]);
       AnchorPoint prev = first;
       points.add(first);
       for (int i = 1; i < p.length; i++) {
-        AnchorPoint cur = new AnchorPoint(p[i], p[i].get(), p[i].get());
+        AnchorPoint cur = new AnchorPoint(p[i]);
         curves.add(new Curve(prev, cur));
         points.add(cur);
         prev = cur;
@@ -194,6 +225,27 @@ class Shape implements CurvedShape {
     return c.point(k%1);
   }
 
+  void addPoint(AnchorPoint p) {
+    addPoint(p, points.size()-1);
+  }
+
+  void addPoint(Point p) {
+    addPoint(p, points.size()-1);
+  }
+
+  void addPoint(AnchorPoint p, int ind) {
+    points.add(ind, p);
+    Curve c = curves.get(ind);
+    Curve temp = c.get();
+    c.setStart(p);
+    temp.setEnd(p);
+    curves.add(ind, temp);
+  }
+
+  void addPoint(Point p, int ind) {
+    addPoint(new AnchorPoint(p), ind);
+  }
+
   void press(float x, float y, boolean left) {
     for (AnchorPoint p : points) {
       p.press(x, y, left);
@@ -202,6 +254,21 @@ class Shape implements CurvedShape {
 
   void release(boolean left) {
     for (AnchorPoint p : points) {
+      if (p.active && !shift) {
+        for (AnchorPoint ap : points) {
+          if (ap != p) {
+            Point temp = snap(p.p, ap.p, ap.d1, ap.d2); 
+            if (temp != null && p.pDrag)
+              p.p = temp;
+            temp = snap(p.d1, ap.p, ap.d1, ap.d2);
+            if (temp != null && p.d1Drag)
+              p.d1 = temp;
+            temp = snap(p.d2, ap.p, ap.d1, ap.d2);
+            if (temp != null && p.d2Drag)
+              p.d2 = temp;
+          }
+        }
+      }
       p.release(left);
     }
   }
@@ -211,7 +278,7 @@ class Shape implements CurvedShape {
       p.drag(px, py, x, y, left);
     }
   }
-  
+
   Point center() {
     float x = 0, y = 0;
     int n = points.size() * 3;
@@ -223,7 +290,7 @@ class Shape implements CurvedShape {
     y /= n;
     return new Point(x, y);
   }
-  
+
   float maxDist(Point c) {
     float res = 0;
     for (AnchorPoint p : points) {
@@ -242,6 +309,16 @@ class Shape implements CurvedShape {
     }
     return res;
   }
+}
+
+Point snap(Point p, Point a, Point b, Point c) {
+  if (dist(p, a) < snapDist)
+    return a.get();
+  if (dist(p, b) < snapDist)
+    return b.get();
+  if (dist(p, c) < snapDist)
+    return c.get();
+  return null;
 }
 
 void line(Point p1, Point p2) {
