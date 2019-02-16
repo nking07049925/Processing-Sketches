@@ -22,6 +22,32 @@ class Point {
     fill(c);
     ellipse(x, y, pointRad * 2, pointRad * 2);
   }
+
+  void draw(PGraphics g, color c) {
+    g.noStroke();
+    g.fill(c);
+    g.ellipse(x, y, pointRad * 2, pointRad * 2);
+  }
+  
+  void sub(Point p) {
+    x-=p.x;
+    y-=p.y;
+  }
+  
+  void add(Point p) {
+    x+=p.x;
+    y+=p.y;
+  }
+  
+  void div(float f) {
+    x/=f;
+    y/=f;
+  }
+  
+  void mult(float f) {
+    x*=f;
+    y*=f;
+  }
 }
 
 class AnchorPoint {
@@ -106,17 +132,15 @@ class AnchorPoint {
   }
 
   void drag(float px, float py, float x, float y, boolean left) {
+    Point d = new Point(x - px, y - py);
     if (d1Drag || (pDrag && left && !shift)) {
-      d1.x += x - px;
-      d1.y += y - py;
+      d1.add(d);
     }
     if (d2Drag || (pDrag && left && !shift)) {
-      d2.x += x - px;
-      d2.y += y - py;
+      d2.add(d);
     }
     if (pDrag) {
-      p.x += x - px;
-      p.y += y - py;
+      p.add(d);
     }
   }
 }
@@ -258,8 +282,15 @@ class Shape implements CurvedShape {
         for (AnchorPoint ap : points) {
           if (ap != p) {
             Point temp = snap(p.p, ap.p, ap.d1, ap.d2); 
-            if (temp != null && p.pDrag)
+            if (temp != null && p.pDrag) {
+              if (left && !shift) {
+                Point d = temp.get();
+                d.sub(p.p);
+                p.d1.add(d);
+                p.d2.add(d);
+              }
               p.p = temp;
+            }
             temp = snap(p.d1, ap.p, ap.d1, ap.d2);
             if (temp != null && p.d1Drag)
               p.d1 = temp;
@@ -323,6 +354,10 @@ Point snap(Point p, Point a, Point b, Point c) {
 
 void line(Point p1, Point p2) {
   line(p1.x, p1.y, p2.x, p2.y);
+}
+
+void line(PGraphics pg, Point p1, Point p2) {
+  pg.line(p1.x, p1.y, p2.x, p2.y);
 }
 
 void bezier(AnchorPoint p1, AnchorPoint p2) {
