@@ -1,5 +1,6 @@
 PShader shade;
 PShader sobel;
+PShader blur;
 PGraphics main;
 PGraphics normalMap;
 PGraphics heightMap;
@@ -7,6 +8,7 @@ PGraphics brush;
 PGraphics brushInverted;
 float brushSize = 200;
 float brushOpacity = 0.1;
+float brushBrightness = 1;
 color diffuse;
 
 int ADD_SUB = 1;
@@ -21,6 +23,9 @@ void setup() {
   sobel = loadShader("sobel.glsl");
   sobel.set("strength", 3.0);
   sobel.set("level", 2.0);
+  blur = loadShader("blur.glsl");
+  blur.set("blurSize", 4);
+  blur.set("sigma", 2.0);
   heightMap = createGraphics(height/2, height/2, P2D);
   heightMap.beginDraw();
   heightMap.background(0);
@@ -29,10 +34,10 @@ void setup() {
   updateNormal();
   brush = createGraphics(256, 256, P2D);
   brush.beginDraw();
-  brush.background(0);
+  brush.blendMode(REPLACE);
   brush.noStroke();
   for (int i = 255; i > 0; i--) {
-    brush.fill(256-i);
+    brush.fill(255,256-i);
     brush.circle(128, 128, sqrt(i/256f)*256);
   }
   brush.endDraw();
@@ -51,7 +56,7 @@ void draw() {
     strokeWeight(3);
     circle(mouseX, mouseY, brushSize);
     blendMode(BLEND);
-    fill(255, 0, 0, 255*brushOpacity);
+    fill(255*brushBrightness, 255*(1-brushBrightness), 0, 255*brushOpacity);
     noStroke();
     circle(mouseX, mouseY, brushSize*0.3);
   }
@@ -72,6 +77,9 @@ void mouseWheel(MouseEvent mv) {
   if (shift) {
     brushOpacity -= e * 0.05f;
     brushOpacity = constrain(brushOpacity, 0, 1);
+  } else if (ctrl) {
+    brushBrightness -= e * 0.05f;
+    brushBrightness = constrain(brushBrightness, 0, 1);
   } else {
     brushSize -= e * 10f;
     brushSize = constrain(brushSize, 20, height/3);
@@ -79,10 +87,13 @@ void mouseWheel(MouseEvent mv) {
 }
 
 boolean shift;
+boolean ctrl;
 
 void keyPressed() {
   if (key == CODED && keyCode == SHIFT)
     shift = true;
+  if (key == CODED && keyCode == CONTROL)
+    ctrl = true;
   if (key == char(ADD_SUB)) mode = ADD_SUB;
   if (key == char(LIGHT_DARK)) mode = LIGHT_DARK;
 }
@@ -90,4 +101,6 @@ void keyPressed() {
 void keyReleased() {
   if (key == CODED && keyCode == SHIFT)
     shift = false;
+  if (key == CODED && keyCode == CONTROL)
+    ctrl = false;
 }
