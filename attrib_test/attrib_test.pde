@@ -26,13 +26,11 @@ void draw() {
   directionalLight(64, 64, 90, 0, -1, 0);
   float deg = frameCount*0.01;
   rotate(deg, -0.7, 0.3, 0);
+  rotateX(PI/2);
   specular(255);
   shininess(50);
   ambient(60);
   diffuse(120);
-  PMatrix3D m = new PMatrix3D();
-  getMatrix(m);
-  shade.set("nm", m, true);
   shader(shade);
   uvbox(min(width,height)*0.5);
 }
@@ -107,5 +105,5 @@ void uvbox(float a) {
 }
 
 void tangent(float x, float y, float z) {
-  attrib("tangent", x, y, z);
+  attribNormal("tangent", x, y, z);
 }
