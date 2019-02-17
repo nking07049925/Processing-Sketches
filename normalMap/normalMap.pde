@@ -1,5 +1,6 @@
 PShader shade;
 PShader sobel;
+PGraphics main;
 PGraphics normalMap;
 PGraphics heightMap;
 PGraphics brush;
@@ -7,18 +8,20 @@ color diffuse;
 
 void setup() {
   fullScreen(P3D);
-  stroke(255);
-  noStroke();
-  tint(255);
-  fill(255);
+  main = createGraphics(width - height/2, height, P3D);
   shade = loadShader("PhongFrag.glsl", "PhongVert.glsl");
   sobel = loadShader("sobel.glsl");
   sobel.set("strength", 3.0);
   sobel.set("level", 2.0);
   textureMode(NORMAL);
-  normalMap = createGraphics(512, 512, P2D);
+  heightMap = createGraphics(height/2, height/2, P2D);
+  heightMap.beginDraw();
+  heightMap.background(0);
+  heightMap.endDraw();
+  normalMap = createGraphics(height/2, height/2, P2D);
   normalMap.beginDraw();
-  normalMap.background(128,128,256);
+  normalMap.image(heightMap,0,0);
+  normalMap.filter(sobel);
   normalMap.endDraw();
   brush = createGraphics(256, 256, P2D);
   brush.beginDraw();
@@ -33,32 +36,40 @@ void setup() {
 }
 
 void draw() {
+  drawMain();
   background(0);
-  translate(width/2, height/2);
-  ambientLight(255, 255, 255);
-  lightSpecular(256, 256, 256);
-  directionalLight(255, 255, 220, -1, 1, -1);
-  lightSpecular(0,0,32);
-  directionalLight(64, 64, 90, 0, -1, 0);
+  image(main, height/2, 0);
+}
+
+void drawMain() {
+  main.beginDraw();
+  main.stroke(255);
+  main.noStroke();
+  main.tint(255);
+  main.fill(255);
+  main.background(0);
+  main.translate(main.width/2, main.height/2);
+  main.ambientLight(255, 255, 255);
+  main.lightSpecular(256, 256, 256);
+  main.directionalLight(255, 255, 220, -1, 1, -1);
+  main.lightSpecular(0,0,32);
+  main.directionalLight(64, 64, 90, 0, -1, 0);
   float deg = frameCount*0.01;
-  rotate(deg, cos(deg), sin(deg), 0);
-  specular(255);
-  shininess(100);
-  ambient(60);
+  main.rotate(deg, cos(deg), sin(deg), 0);
+  main.specular(255);
+  main.shininess(100);
+  main.ambient(60);
   diffuse(120);
-  PMatrix3D m = new PMatrix3D();
-  getMatrix(m);
-  shade.set("nm", m, true);
-  shade.set("normTex", normalMap);
-  shader(shade);
-  uvbox(min(width,height)*0.5);
+  main.shader(shade);
+  uvbox(main, min(width,height)*0.5);
+  main.endDraw();
 }
 
 void diffuse(float val) {
   diffuse = color(val);
 }
 
-void uvbox(float a) {
+void uvbox(PGraphics pg, float a) {
   float x1 = -a/2;
   float x2 =  a/2;
   float y1 = -a/2;
@@ -69,60 +80,60 @@ void uvbox(float a) {
   float u2 = 1;
   float v1 = 1;
   float v2 = 0;
-  beginShape(QUADS);
-  texture(normalMap);
-  attrib("diffuse", red(diffuse)/255f, green(diffuse)/255f, blue(diffuse)/255f, 1.0);
+  pg.beginShape(QUADS);
+  pg.texture(normalMap);
+  pg.attrib("diffuse", red(diffuse)/255f, green(diffuse)/255f, blue(diffuse)/255f, 1.0);
   
   // front
-  normal(0, 0, 1);
-  tangent(1, 0, 0);
-  vertex(x1, y1, z1, u2, v1);
-  vertex(x2, y1, z1, u1, v1);
-  vertex(x2, y2, z1, u1, v2);
-  vertex(x1, y2, z1, u2, v2);
+  pg.normal(0, 0, 1);
+  tangent(pg, 1, 0, 0);
+  pg.vertex(x1, y1, z1, u2, v1);
+  pg.vertex(x2, y1, z1, u1, v1);
+  pg.vertex(x2, y2, z1, u1, v2);
+  pg.vertex(x1, y2, z1, u2, v2);
 
   // right
-  normal(1, 0, 0);
-  tangent(0, 0, -1);
-  vertex(x2, y1, z1, u2, v1);
-  vertex(x2, y1, z2, u1, v1);
-  vertex(x2, y2, z2, u1, v2);
-  vertex(x2, y2, z1, u2, v2);
+  pg.normal(1, 0, 0);
+  tangent(pg, 0, 0, -1);
+  pg.vertex(x2, y1, z1, u2, v1);
+  pg.vertex(x2, y1, z2, u1, v1);
+  pg.vertex(x2, y2, z2, u1, v2);
+  pg.vertex(x2, y2, z1, u2, v2);
 
   // back
-  normal(0, 0, -1);
-  tangent(-1, 0, 0);
-  vertex(x2, y1, z2, u2, v1);
-  vertex(x1, y1, z2, u1, v1);
-  vertex(x1, y2, z2, u1, v2);
-  vertex(x2, y2, z2, u2, v2);
+  pg.normal(0, 0, -1);
+  tangent(pg, -1, 0, 0);
+  pg.vertex(x2, y1, z2, u2, v1);
+  pg.vertex(x1, y1, z2, u1, v1);
+  pg.vertex(x1, y2, z2, u1, v2);
+  pg.vertex(x2, y2, z2, u2, v2);
 
   // left
-  normal(-1, 0, 0);
-  tangent(0, 0, 1);
-  vertex(x1, y1, z2, u2, v1);
-  vertex(x1, y1, z1, u1, v1);
-  vertex(x1, y2, z1, u1, v2);
-  vertex(x1, y2, z2, u2, v2);
+  pg.normal(-1, 0, 0);
+  tangent(pg, 0, 0, 1);
+  pg.vertex(x1, y1, z2, u2, v1);
+  pg.vertex(x1, y1, z1, u1, v1);
+  pg.vertex(x1, y2, z1, u1, v2);
+  pg.vertex(x1, y2, z2, u2, v2);
 
   // top
-  normal(0, -1, 0);
-  tangent(-1, 0, 0);
-  vertex(x1, y1, z2, u2, v2);
-  vertex(x2, y1, z2, u1, v2);
-  vertex(x2, y1, z1, u1, v1);
-  vertex(x1, y1, z1, u2, v1);
+  pg.normal(0, -1, 0);
+  tangent(pg, -1, 0, 0);
+  pg.vertex(x1, y1, z2, u2, v2);
+  pg.vertex(x2, y1, z2, u1, v2);
+  pg.vertex(x2, y1, z1, u1, v1);
+  pg.vertex(x1, y1, z1, u2, v1);
 
   // bottom
-  normal(0, 1, 0);
-  tangent(1, 0, 0);
-  vertex(x1, y2, z1, u2, v1);
-  vertex(x2, y2, z1, u1, v1);
-  vertex(x2, y2, z2, u1, v2);
-  vertex(x1, y2, z2, u2, v2);
-  endShape();
+  pg.normal(0, 1, 0);
+  tangent(pg, 1, 0, 0);
+  pg.vertex(x1, y2, z1, u2, v1);
+  pg.vertex(x2, y2, z1, u1, v1);
+  pg.vertex(x2, y2, z2, u1, v2);
+  pg.vertex(x1, y2, z2, u2, v2);
+  pg.endShape();
 }
 
-void tangent(float x, float y, float z) {
-  attrib("tangent", x, y, z);
+void tangent(PGraphics pg, float x, float y, float z) {
+  pg.attribNormal("tangent", x, y, z);
 }

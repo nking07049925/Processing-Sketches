@@ -20,7 +20,6 @@ uniform mat4 modelviewMatrix;
 uniform mat4 transformMatrix;
 uniform mat3 normalMatrix;
 uniform mat4 texMatrix;
-uniform mat3 nm;
 
 uniform int lightCount;
 uniform vec4 lightPosition[8];
@@ -70,7 +69,7 @@ void main() {
   
   // Normal vector in eye coordinates
   vNormal = normalize(normal);
-  vTangent = normalize(tangent*nm);
+  vTangent = normalize(tangent);
 
   vertTexCoord = texMatrix * vec4(texCoord, 1.0, 1.0);        
 	
