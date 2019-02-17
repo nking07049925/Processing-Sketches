@@ -27,7 +27,7 @@ void drawMain() {
 
 void drawHeight() {
   heightMap.beginDraw();
-  heightMap.tint(255*brushBrightness, 255*brushOpacity);
+  heightMap.tint(255*brushOpacity);
   heightMap.blendMode(BLEND);
   if (mouseButton == LEFT) {
     heightMap.blendMode(ADD);
@@ -46,6 +46,8 @@ void updateNormal() {
   normalMap.background(0);
   normalMap.image(heightMap, 0, 0);
   normalMap.filter(sobel);
+  blur.set("blurSize", 4);
+  blur.set("sigma", 2.0);
   blur.set("horizontal", true);
   normalMap.filter(blur);
   blur.set("horizontal", false);
