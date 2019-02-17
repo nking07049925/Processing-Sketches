@@ -21,12 +21,12 @@ vec4 normToColor(in vec3 norm) {
 void main() {
 	vec2 uv = gl_FragCoord.xy / resolution;
 	vec3 sobel = vec3(1.0, 2.0, 1.0);
-	mat3 vals = mat3(col(-1,-1), col( 0,-1), col( 1,-1),
-									 col(-1, 0), col( 0, 0), col( 1, 0),
-									 col(-1, 1), col( 0, 1), col( 1, 1));
+	mat3 vals = mat3(col(-1.0,-1.0), col( 0.0,-1.0), col( 1.0,-1.0),
+									 col(-1.0, 0.0), col( 0.0, 0.0), col( 1.0, 0.0),
+									 col(-1.0, 1.0), col( 0.0, 1.0), col( 1.0, 1.0));
 	float Gy = dot(vals[0], sobel) + dot(vals[2], -sobel);
 	vals = transpose(vals);
-	float Gx = dot(vals[0], sobel) + dot(vals[2], -sobel);
-	vec3 norm = vec3(Gx * strength, Gy * strength, 1/level);
+	float Gx = dot(vals[0], -sobel) + dot(vals[2], sobel);
+	vec3 norm = vec3(Gx * strength, Gy * strength, 1.0 / level);
   gl_FragColor = normToColor(norm);
 }
