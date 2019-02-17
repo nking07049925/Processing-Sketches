@@ -1,6 +1,8 @@
 PShader shade;
-PImage img;
-PImage norm;
+PShader sobel;
+PGraphics normalMap;
+PGraphics heightMap;
+PGraphics brush;
 color diffuse;
 
 void setup() {
@@ -10,10 +12,24 @@ void setup() {
   tint(255);
   fill(255);
   shade = loadShader("PhongFrag.glsl", "PhongVert.glsl");
+  sobel = loadShader("sobel.glsl");
+  sobel.set("strength", 3.0);
+  sobel.set("level", 2.0);
   textureMode(NORMAL);
-  img = loadImage("img.jpg");
-  norm = loadImage("norm.jpg");
-  shade.set("normTex", norm);
+  normalMap = createGraphics(512, 512, P2D);
+  normalMap.beginDraw();
+  normalMap.background(128,128,256);
+  normalMap.endDraw();
+  brush = createGraphics(256, 256, P2D);
+  brush.beginDraw();
+  brush.background(0);
+  brush.noStroke();
+  brush.fill(255,1);
+  brush.blendMode(ADD);
+  for (int i = 0; i < 256; i++) {
+    brush.circle(128,128,sq(i/256f)*256); 
+  }
+  brush.endDraw();
 }
 
 void draw() {
@@ -25,14 +41,15 @@ void draw() {
   lightSpecular(0,0,32);
   directionalLight(64, 64, 90, 0, -1, 0);
   float deg = frameCount*0.01;
-  rotate(deg, -0.7, 0.3, 0);
+  rotate(deg, cos(deg), sin(deg), 0);
   specular(255);
-  shininess(50);
+  shininess(100);
   ambient(60);
   diffuse(120);
   PMatrix3D m = new PMatrix3D();
   getMatrix(m);
   shade.set("nm", m, true);
+  shade.set("normTex", normalMap);
   shader(shade);
   uvbox(min(width,height)*0.5);
 }
@@ -53,7 +70,7 @@ void uvbox(float a) {
   float v1 = 1;
   float v2 = 0;
   beginShape(QUADS);
-  texture(img);
+  texture(normalMap);
   attrib("diffuse", red(diffuse)/255f, green(diffuse)/255f, blue(diffuse)/255f, 1.0);
   
   // front

@@ -29,7 +29,6 @@ uniform vec3 lightDiffuse[8];
 uniform vec3 lightSpecular[8];      
 uniform vec3 lightFalloff[8];
 uniform vec2 lightSpot[8];
-uniform sampler2D normTex;
 uniform sampler2D texture;
 
 in vec4 vAmbient;
@@ -82,8 +81,8 @@ void main() {
 
   mat3 objLocal = transpose(mat3(tangent, binormal, ecNormal));
 	
-	vec4 color = texture2D(texture, vertTexCoord.st) * vColor;
-  vec3 normal = vec3(2.0 * texture2D(normTex, vertTexCoord.st) - 1.0);
+	vec4 color = vColor;
+  vec3 normal = vec3(2.0 * texture2D(texture, vertTexCoord.st) - 1.0);
   vec3 normalInv = -normal;
 
   vec3 viewDir = objLocal * ecVertex;
