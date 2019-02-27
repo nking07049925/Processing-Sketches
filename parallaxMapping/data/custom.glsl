@@ -5,12 +5,16 @@ precision mediump int;
 
 uniform vec2 resolution;
 
-const float radK = 0.45;
+const float radK = 0.3;
+const float edgeK = 0.9;
+const float edgeSmoothK = 0.8;
 const float PI = 3.1415926535;
 
 void main() {
     vec2 pos = gl_FragCoord.xy - resolution * 0.5;
     float rad = min(resolution.x, resolution.y) * radK;
+    float edge = min(resolution.x, resolution.y) * edgeK;
+    float edgeSmooth = min(resolution.x, resolution.y) * edgeSmoothK;
 	
     float col = 1.0;
     vec2 pos1 = pos + vec2(rad, 0.0);
@@ -33,6 +37,13 @@ void main() {
     col -= sqrt(1.0 - dist1h * dist1h) * 0.5;
     col -= sqrt(1.0 - dist2  * dist2) * col2;
     col += sqrt(1.0 - dist2h * dist2h) * 0.5;
+
+    if (!all(lessThan(abs(pos), vec2(edge * 0.5)))) {
+    	col = 2.0;
+    } else if (any(greaterThan(abs(pos), vec2(edgeSmooth * 0.5)))) {
+    	vec2 tmp = (abs(pos * 2.0) - edgeSmooth) / (edge - edgeSmooth);
+    	col = 1.0 + max(tmp.x, tmp.y);
+    }
         
     // Output to screen
     gl_FragColor = vec4(vec3(col * 0.5), 1.0);

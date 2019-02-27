@@ -30,6 +30,9 @@ uniform vec3 lightSpecular[8];
 uniform vec3 lightFalloff[8];
 uniform vec2 lightSpot[8];
 uniform sampler2D texture;
+uniform sampler2D heightMap;
+uniform sampler2D normalMap;
+uniform sampler2D sky;
 
 in vec4 vAmbient;
 in vec4 vSpecular;
@@ -48,6 +51,9 @@ in vec3 vTangent;
 const float zero_float = 0.0;
 const float one_float = 1.0;
 const vec3 zero_vec3 = vec3(0);
+
+const float height_scale = 0.1;
+const float PI = 3.14159265359;
 
 float falloffFactor(vec3 lightPos, vec3 vertPos, vec3 coeff) {
   vec3 lpv = lightPos - vertPos;
@@ -74,18 +80,65 @@ float blinnPhongFactor(vec3 lightDir, vec3 vertPos, vec3 vecNormal, float shine)
   return pow(max(zero_float, dot(ldp, vecNormal)), shine);
 }
 
+vec2 parallaxMap(vec2 texCoords, vec3 viewDir) {
+  const float numLayers = 30.0;
+  float layerHeight = 1.0 / numLayers;
+  float currentLayerHeight = 1.0;
+  vec2 p = viewDir.xy / viewDir.z * height_scale * vec2(1.0, -1.0);
+  //vec2 p = -viewDir.xy * height_scale * 0.001 * vec2(1.0, -1.0);
+  vec2 deltaTexCoords = p / numLayers;
+  vec2  currentTexCoords      = texCoords;
+  float currentHeightMapValue = texture(heightMap, currentTexCoords).r;
+  float prevHeightMapValue = 1.0 + layerHeight;
+
+  while(currentLayerHeight > currentHeightMapValue) {
+    currentTexCoords += deltaTexCoords;
+    prevHeightMapValue = currentHeightMapValue;
+    currentHeightMapValue = texture(heightMap, currentTexCoords).r;
+    currentLayerHeight -= layerHeight;  
+  }
+
+  float hPrev = prevHeightMapValue - currentLayerHeight - layerHeight;
+  float hCur = currentHeightMapValue - currentLayerHeight;
+
+  return currentTexCoords - deltaTexCoords * hCur / (hCur - hPrev);
+  //return currentTexCoords;
+}
+
+// getting the color from a panoramic background image using a directional vector
+vec3 getSkybox(vec3 dir) {
+  // cartesian to spherical
+  float sqrtXZ = sqrt(dir.x * dir.x + dir.z * dir.z);
+  vec2 angles = vec2(atan(-dir.z, dir.x) + PI,
+    atan(dir.y, sqrtXZ) + 0.5 * PI);
+  // normalizing coords
+  vec2 texPos = angles / vec2(2.0 * PI, PI);
+  return texture2D(sky, texPos).xyz;
+  //return vec3(texPos, 0.0);
+}
+
 void main() {
 	vec3 ecNormal = normalize(vNormal);
   vec3 tangent = normalize(vTangent);
   vec3 binormal = cross(ecNormal, tangent);
 
   mat3 objLocal = transpose(mat3(tangent, binormal, ecNormal));
-	
-	vec4 color = vColor;
-  vec3 normal = vec3(2.0 * texture2D(texture, vertTexCoord.st) - 1.0);
-  vec3 normalInv = -normal;
+  mat3 invLocal = inverse(objLocal);
 
   vec3 viewDir = objLocal * ecVertex;
+
+  //vec4 color = vec4(getSkybox(invLocal * viewDir), 1.0);
+
+  vec2 uv = parallaxMap(vertTexCoord.st, viewDir);
+	
+	vec4 color = vColor * texture2D(texture, uv);
+
+  vec3 normal = normalize(vec3(2.0 * texture2D(normalMap, uv) - 1.0));
+  vec3 normalInv = -normal;
+
+  vec3 refl = reflect(viewDir, normal);
+  vec3 reflCol = mix(getSkybox(invLocal * refl), vec3(1.0), 0.2);
+  color *= vec4(reflCol, 1.0);
 	
 	vec4 ambient = vAmbient;
 	vec4 specular = vSpecular;
@@ -94,6 +147,7 @@ void main() {
 	float shininess = vShininess;
 	
 	// Light calculations
+  //vec3 totalAmbient = color.rgb;
   vec3 totalAmbient = vec3(0, 0, 0);
   
   vec3 totalFrontDiffuse = vec3(0, 0, 0);
@@ -149,15 +203,15 @@ void main() {
 
   // Calculating final color as result of all lights (plus emissive term).
   // Transparency is determined exclusively by the diffuse component.
-  vec4 vertColor =			vec4(totalAmbient, 0) * ambient+ 
-												vec4(totalFrontDiffuse, 1) * diffuse + 
-												vec4(totalFrontSpecular, 0) * specular + 
-												vec4(emissive.rgb, 0);
+  vec4 vertColor =			vec4(totalAmbient, 0.0) * ambient+ 
+												vec4(totalFrontDiffuse, 1.0) * diffuse + 
+												vec4(totalFrontSpecular, 0.0) * specular + 
+												vec4(emissive.rgb, 0.0);
               
-  vec4 backVertColor = 	vec4(totalAmbient, 0) * ambient + 
-												vec4(totalBackDiffuse, 1) * diffuse + 
-												vec4(totalBackSpecular, 0) * specular + 
-												vec4(emissive.rgb, 0);
+  vec4 backVertColor = 	vec4(totalAmbient, 0.0) * ambient + 
+												vec4(totalBackDiffuse, 1.0) * diffuse + 
+												vec4(totalBackSpecular, 0.0) * specular + 
+												vec4(emissive.rgb, 0.0);
 	
   gl_FragColor = color * (gl_FrontFacing ? vertColor : backVertColor);
 }

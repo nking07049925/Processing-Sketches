@@ -1,23 +1,27 @@
 void drawMain() {
   main.beginDraw();
+  main.filter(skybox);
+  main.textureWrap(REPEAT);
   main.textureMode(NORMAL);
   main.stroke(255);
   main.noStroke();
   main.tint(255);
   main.fill(255);
-  main.background(0);
   main.translate(main.width/2, main.height/2);
   main.ambientLight(255, 255, 255);
   main.lightSpecular(256, 256, 256);
   main.directionalLight(255, 255, 220, -1, 1, -1);
   main.lightSpecular(0, 0, 32);
   main.directionalLight(64, 64, 90, 0, -1, 0);
-  float deg = frameCount*0.003;
+  float deg = -frameCount*0.003;
+  //float deg = 0.3;
   main.rotate(deg, cos(deg), sin(deg), 0);
   main.specular(255);
   main.shininess(100);
   main.ambient(60);
   diffuse(120);
+  shade.set("heightMap", heightMap);
+  shade.set("normalMap", normalMap);
   main.shader(shade);
   uvbox(main, min(width, height)*0.5);
   main.endDraw();
@@ -25,16 +29,10 @@ void drawMain() {
 
 void drawHeight() {
   heightMap.beginDraw();
-  heightMap.tint(255*brushOpacity);
+  heightMap.tint(255*(mouseButton==LEFT?brushOpacity:0));
   heightMap.blendMode(BLEND);
-  if (mouseButton == LEFT) {
-    heightMap.blendMode(ADD);
-  }
-  if (mouseButton == RIGHT) {
-    heightMap.blendMode(SUBTRACT);
-  }
-  if (mouseX < height/2 && mouseY < height/2) {
-    heightMap.image(brush, mouseX-brushSize/2, mouseY-brushSize/2, brushSize, brushSize);
+  if (mouseX < height/2 && mouseY > height/2) {
+    heightMap.image(brush, mouseX-brushSize/2, mouseY-height/2-brushSize/2, brushSize, brushSize);
   }
   heightMap.endDraw();
 }
@@ -69,7 +67,7 @@ void uvbox(PGraphics pg, float a) {
   float v1 = 1;
   float v2 = 0;
   pg.beginShape(QUADS);
-  pg.texture(normalMap);
+  pg.texture(texture);
   pg.attrib("diffuse", red(diffuse)/255f, green(diffuse)/255f, blue(diffuse)/255f, 1.0);
 
   // front
@@ -107,10 +105,10 @@ void uvbox(PGraphics pg, float a) {
   // top
   pg.normal(0, -1, 0);
   tangent(pg, -1, 0, 0);
-  pg.vertex(x1, y1, z2, u2, v2);
-  pg.vertex(x2, y1, z2, u1, v2);
-  pg.vertex(x2, y1, z1, u1, v1);
-  pg.vertex(x1, y1, z1, u2, v1);
+  pg.vertex(x1, y1, z2, u1, v2);
+  pg.vertex(x2, y1, z2, u2, v2);
+  pg.vertex(x2, y1, z1, u2, v1);
+  pg.vertex(x1, y1, z1, u1, v1);
 
   // bottom
   pg.normal(0, 1, 0);
