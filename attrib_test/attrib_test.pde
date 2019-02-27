@@ -89,10 +89,10 @@ void uvbox(float a) {
   // top
   normal(0, -1, 0);
   tangent(-1, 0, 0);
-  vertex(x1, y1, z2, u2, v2);
-  vertex(x2, y1, z2, u1, v2);
-  vertex(x2, y1, z1, u1, v1);
-  vertex(x1, y1, z1, u2, v1);
+  vertex(x1, y1, z2, u1, v2);
+  vertex(x2, y1, z2, u2, v2);
+  vertex(x2, y1, z1, u2, v1);
+  vertex(x1, y1, z1, u1, v1);
 
   // bottom
   normal(0, 1, 0);

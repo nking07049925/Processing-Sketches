@@ -109,10 +109,10 @@ void uvbox(PGraphics pg, float a) {
   // top
   pg.normal(0, -1, 0);
   tangent(pg, -1, 0, 0);
-  pg.vertex(x1, y1, z2, u2, v2);
-  pg.vertex(x2, y1, z2, u1, v2);
-  pg.vertex(x2, y1, z1, u1, v1);
-  pg.vertex(x1, y1, z1, u2, v1);
+  pg.vertex(x1, y1, z2, u1, v2);
+  pg.vertex(x2, y1, z2, u2, v2);
+  pg.vertex(x2, y1, z1, u2, v1);
+  pg.vertex(x1, y1, z1, u1, v1);
 
   // bottom
   pg.normal(0, 1, 0);
